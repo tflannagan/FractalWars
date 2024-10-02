@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FractalWars | Ty</title>
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sankofa+Display&display=swap" rel="stylesheet">
+    <style>
+        *{
+            font-family: "Sankofa Display", sans-serif !important;
+        }
+        body {
+            font-family: "Sankofa Display", sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #0c0c1d;
+            color: #00ffff;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            transition: all 0.3s ease;
+        }
+
+        .simulation-container {
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #simulationCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .overlay {
+            position: absolute;
+            padding: 8px;
+            background-color: rgba(12, 12, 29, 0.8);
+            border-radius: 5px;
+            font-size: 0.9rem;
+            border: 1px solid #00ffff;
+        }
+
+        #statsOverlay {
+            bottom: 10px;
+            left: 10px;
+        }
+
+        .side-panel {
+            width: 250px;
+            background-color: rgba(26, 26, 58, 0.9);
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: transform 0.3s ease, width 0.3s ease;
+            position: relative;
+        }
+
+        .side-panel.collapsed {
+            transform: translateX(100%);
+            width: 0;
+            padding: 0;
+        }
+
+        .toggle-panel {
+            position: absolute;
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(26, 26, 58, 0.9);
+            color: #00ffff;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px 0 0 5px;
+            transition: transform 0.3s ease;
+            z-index: 10;
+        }
+
+        .toggle-panel:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+        }
+
+        .toggle-panel.collapsed {
+            transform: translateY(-50%) rotate(180deg);
+            border-radius: 0 5px 5px 0;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        button {
+            font-family: Arial, sans-serif;
+            font-size: 1rem;
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: #1a1a3a;
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background-color: #00ffff;
+            color: #1a1a3a;
+        }
+
+        .theme-selector {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+            background-color: rgba(26, 26, 58, 0.8);
+            border-radius: 5px;
+            padding: 10px;
+            border: 1px solid #00ffff;
+        }
+
+        .theme-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .theme-option:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-option.selected::after {
+            content: '✓';
+            color: white;
+            font-size: 24px;
+            text-shadow: 0 0 3px black;
+        }
+
+        .color-preview {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin: 0 -2px;
+        }
+        #addNodeBtn {
+            margin: 0 !important;
+            padding: 8px 4px !important;
+        }
+        
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="simulation-container">
+            <canvas id="simulationCanvas"></canvas>
+            <div id="statsOverlay" class="overlay"></div>
+        </div>
+        <div class="side-panel">
+            <button class="toggle-panel">◀</button>
+            <div class="controls">
+                <button id="startStopBtn">Start</button>
+                <button id="resetBtn"><svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#00ffff"><path d="M480-90q-70 0-131.13-26.6-61.14-26.6-106.4-71.87-45.27-45.26-71.87-106.4Q144-356 144-426h72q0 109 77.5 186.5T480-162q109 0 186.5-77.5T744-426q0-109-77.5-186.5T479.61-690H474l51 51-51 51-138-138 138-138 51 51-52 51h7q70 0 131.13 26.6 61.14 26.6 106.4 71.87 45.27 45.26 71.87 106.4Q816-496 816-426t-26.6 131.13q-26.6 61.14-71.87 106.4-45.26 45.27-106.4 71.87Q550-90 480-90Z"/></svg></button>
+                <button id="addNodeBtn"><svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#00ffff"><path d="M444-444H240v-72h204v-204h72v204h204v72H516v204h-72v-204Z"/></svg></button>
+                <input type="range" id="speedControl" min="1" max="100" value="50">
+                <span id="speedValue">50</span>
+                
+            </div>
+            <div class="theme-selector" id="themeSelector"></div>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('simulationCanvas');
+        const ctx = canvas.getContext('2d');
+        const startStopBtn = document.getElementById('startStopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statsOverlay = document.getElementById('statsOverlay');
+        const sidePanel = document.querySelector('.side-panel');
+        const togglePanel = document.querySelector('.toggle-panel');
+        const speedControl = document.getElementById('speedControl');
+        const speedValue = document.getElementById('speedValue');
+        const themeSelector = document.getElementById('themeSelector');
+        const addNodeBtn = document.getElementById('addNodeBtn');
+        let additionalNodesCount = 0;
+    
+        let width, height;
+        let isRunning = false;
+        let rootNodes = [];
+        let particles = [];
+        let simulationSpeed = 1;
+    
+        const colorThemes = [
+            { name: 'Neon Twilight', primary: '#FF00FF', secondary: '#00FFFF', tertiary: '#8A2BE2', quaternary: '#4169E1', background: '#0C0C0C' },
+            { name: 'Emerald Enigma', primary: '#00A000', secondary: '#32CD32', tertiary: '#3CB371', quaternary: '#2E8B57', background: '#002200' },
+            { name: 'Violet Vortex', primary: '#8A2BE2', secondary: '#9400D3', tertiary: '#9370DB', quaternary: '#BA55D3', background: '#2A004F' },
+            { name: 'Sapphire Seas', primary: '#0000CD', secondary: '#4169E1', tertiary: '#1E90FF', quaternary: '#00BFFF', background: '#00008B' }
+        ];
+        let currentTheme = colorThemes[0];
+        
+        class Node {
+        constructor(x, y, angle, length, depth = 0, color, rootIndex) {
+            this.x = x;
+            this.y = y;
+            this.targetX = x + Math.cos(angle) * length;
+            this.targetY = y + Math.sin(angle) * length;
+            this.currentLength = 0;
+            this.targetLength = length;
+            this.angle = angle;
+            this.depth = depth;
+            this.children = [];
+            this.growthSpeed = 1 * simulationSpeed;
+            this.branchProbability = 0.01 * simulationSpeed * (1 - this.depth / this.maxDepth);
+            this.maxChildren = 8;
+            this.maxDepth = Math.floor(15 + Math.sqrt(width * height) / 100);
+            this.color = color;
+            this.rootIndex = rootIndex;
+            this.energy = 150;
+            this.particleCount = 0;
+            this.particlesNeededToGrow = 5;
+            this.blocked = false;
+            this.blockingBattleNode = null;
+        }
+
+        update() {
+            if (!this.blocked) {
+                if (this.currentLength < this.targetLength) {
+                    this.currentLength += this.growthSpeed;
+                    if (this.currentLength > this.targetLength) {
+                        this.currentLength = this.targetLength;
+                    }
+                } else if (this.children.length < this.maxChildren && this.depth < this.maxDepth && this.particleCount >= this.particlesNeededToGrow) {
+                    this.branch();
+                    this.particleCount -= this.particlesNeededToGrow;
+                }
+            }
+
+            this.children.forEach(child => child.update());
+        }
+
+        branch() {
+            const branchAngle = this.angle + (Math.random() - 0.5) * Math.PI / 3;
+            const lengthFactor = Math.random() < 0.2 ? 1.2 : 0.8;
+            const branchLength = this.targetLength * lengthFactor;
+            this.children.push(new Node(this.targetX, this.targetY, branchAngle, branchLength, this.depth + 1, this.color, this.rootIndex));
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            const endX = this.x + Math.cos(this.angle) * this.currentLength;
+            const endY = this.y + Math.sin(this.angle) * this.currentLength;
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = Math.max(4 - this.depth * 0.5, 0.5);
+            ctx.stroke();
+
+            this.children.forEach(child => child.draw());
+        }
+        die() {
+            // Remove this node from its parent's children array
+            if (this.parent) {
+                const index = this.parent.children.indexOf(this);
+                if (index > -1) {
+                    this.parent.children.splice(index, 1);
+                }
+            }
+
+            // Remove this node from rootNodes if it's a root node
+            const rootIndex = rootNodes.indexOf(this);
+            if (rootIndex > -1) {
+                rootNodes.splice(rootIndex, 1);
+            }
+
+            // Clear all children
+            this.children = [];
+        }
+        getSegments() {
+            let segments = [{
+                x1: this.x, y1: this.y,
+                x2: this.x + Math.cos(this.angle) * this.currentLength,
+                y2: this.y + Math.sin(this.angle) * this.currentLength,
+                node: this
+            }];
+            this.children.forEach(child => segments = segments.concat(child.getSegments()));
+            return segments;
+        }
+
+        receiveParticle() {
+            this.particleCount++;
+            this.energy = Math.min(this.energy + 10, 150);
+        }
+    }
+
+        class BattleNode {
+            constructor(x, y, node1, node2) {
+                this.x = x;
+                this.y = y;
+                this.node1 = node1;
+                this.node2 = node2;
+                this.energy1 = 50;
+                this.energy2 = 50;
+                node1.blocked = true;
+                node2.blocked = true;
+                node1.blockingBattleNode = this;
+                node2.blockingBattleNode = this;
+            }
+
+            update() {
+                if (this.energy1 <= 0 || this.energy2 <= 0) {
+                    this.resolveConflict();
+                    return false;
+                }
+                return true;
+            }
+
+            receiveParticle(fromNode) {
+                if (fromNode === this.node1) {
+                    this.energy1 += 10;
+                    this.energy2 -= 5;
+                } else if (fromNode === this.node2) {
+                    this.energy2 += 10;
+                    this.energy1 -= 5;
+                }
+                this.energy1 = Math.max(0, Math.min(this.energy1, 100));
+                this.energy2 = Math.max(0, Math.min(this.energy2, 100));
+            }
+
+            
+            resolveConflict() {
+                const winner = this.energy1 > this.energy2 ? this.node1 : this.node2;
+                const loser = winner === this.node1 ? this.node2 : this.node1;
+                
+                winner.blocked = false;
+                winner.blockingBattleNode = null;
+                loser.die();
+
+                // Remove this battle node
+                const index = battleNodes.indexOf(this);
+                if (index > -1) {
+                    battleNodes.splice(index, 1);
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = 'red';
+                ctx.fill();
+
+                // Draw energy bars
+                ctx.fillStyle = this.node1.color;
+                ctx.fillRect(this.x - 10, this.y - 15, 20 * (this.energy1 / 100), 3);
+                ctx.fillStyle = this.node2.color;
+                ctx.fillRect(this.x - 10, this.y - 10, 20 * (this.energy2 / 100), 3);
+            }
+        }
+        let battleNodes = [];
+
+        function findIntersections() {
+            const allSegments = rootNodes.flatMap(node => node.getSegments());
+            
+            for (let i = 0; i < allSegments.length; i++) {
+                for (let j = i + 1; j < allSegments.length; j++) {
+                    const seg1 = allSegments[i];
+                    const seg2 = allSegments[j];
+                    
+                    if (seg1.node.rootIndex !== seg2.node.rootIndex && !seg1.node.blocked && !seg2.node.blocked) {
+                        const intersection = lineIntersection(seg1, seg2);
+                        if (intersection) {
+                            battleNodes.push(new BattleNode(intersection.x, intersection.y, seg1.node, seg2.node));
+                        }
+                    }
+                }
+            }
+        }
+        function lineIntersection(seg1, seg2) {
+            const x1 = seg1.x1, y1 = seg1.y1, x2 = seg1.x2, y2 = seg1.y2;
+            const x3 = seg2.x1, y3 = seg2.y1, x4 = seg2.x2, y4 = seg2.y2;
+
+            const den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+            if (den == 0) return null;  // Lines are parallel
+
+            const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / den;
+            const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / den;
+
+            if (ua < 0 || ua > 1 || ub < 0 || ub > 1) return null;  // Intersection point isn't within both line segments
+
+            const x = x1 + ua * (x2 - x1);
+            const y = y1 + ua * (y2 - y1);
+
+            return {x, y};
+        }
+
+        function updateSimulation() {
+            rootNodes.forEach(node => node.update());
+            findIntersections();
+            battleNodes = battleNodes.filter(node => node.update());
+            updateParticles();
+            spawnParticles();
+        }
+
+        function updateParticles() {
+            particles = particles.filter(particle => particle.update());
+        }
+
+        function spawnParticles() {
+            rootNodes.forEach((root) => {
+                if (Math.random() < 0.3 * simulationSpeed) {
+                    particles.push(new Particle(root, root.color));
+                }
+                
+                // Spawn red battle particles
+                if (Math.random() < 0.1 * simulationSpeed) {
+                    const battleNode = battleNodes.find(bn => bn.node1 === root || bn.node2 === root);
+                    if (battleNode) {
+                        particles.push(new Particle(root, 'red', battleNode));
+                    }
+                }
+            });
+        }
+
+        class Particle {
+            constructor(startNode, color, targetBattleNode = null) {
+                this.startNode = startNode;
+                this.currentNode = startNode;
+                this.color = color;
+                this.speed = 3 * simulationSpeed;
+                this.radius = 2;
+                this.progress = 0;
+                this.glowRadius = 6;
+                this.glowOpacity = 0.5;
+                this.targetBattleNode = targetBattleNode;
+            }
+
+            update() {
+                if (this.targetBattleNode) {
+                    const dx = this.targetBattleNode.x - this.startNode.x;
+                    const dy = this.targetBattleNode.y - this.startNode.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    this.progress += this.speed / distance;
+
+                    if (this.progress >= 1) {
+                        this.targetBattleNode.receiveParticle(this.startNode);
+                        return false;
+                    }
+                } else {
+                    this.progress += this.speed / this.currentNode.targetLength;
+
+                    if (this.progress >= 1) {
+                        if (this.currentNode.blocked) {
+                            this.targetBattleNode = this.currentNode.blockingBattleNode;
+                            this.progress = 0;
+                        } else if (this.currentNode.children.length === 0) {
+                            this.currentNode.receiveParticle();
+                            return false;
+                        } else {
+                            this.progress = 0;
+                            this.currentNode = this.selectNextNode(this.currentNode);
+                        }
+                    }
+                }
+
+                return true;
+            }
+            selectNextNode(node) {
+                if (this.targetBattleNode) {
+                    // Move towards the battle node
+                    const dx = this.targetBattleNode.x - node.x;
+                    const dy = this.targetBattleNode.y - node.y;
+                    const angle = Math.atan2(dy, dx);
+                    return {
+                        x: node.x,
+                        y: node.y,
+                        targetX: this.targetBattleNode.x,
+                        targetY: this.targetBattleNode.y,
+                        targetLength: Math.sqrt(dx * dx + dy * dy)
+                    };
+                }
+                if (node.children.length === 0) return node;
+                return node.children[Math.floor(Math.random() * node.children.length)];
+            }
+            draw() {
+            let x, y;
+            if (this.targetBattleNode) {
+                x = this.currentNode.x + (this.targetBattleNode.x - this.currentNode.x) * this.progress;
+                y = this.currentNode.y + (this.targetBattleNode.y - this.currentNode.y) * this.progress;
+            } else {
+                x = this.currentNode.x + (this.currentNode.targetX - this.currentNode.x) * this.progress;
+                y = this.currentNode.y + (this.currentNode.targetY - this.currentNode.y) * this.progress;
+            }
+            
+            // Draw glow
+            const rgbaColor = this.getRgbaColor(this.color, this.glowOpacity);
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, this.glowRadius);
+            gradient.addColorStop(0, rgbaColor);
+            gradient.addColorStop(1, this.getRgbaColor(this.color, 0));
+            
+            ctx.beginPath();
+            ctx.arc(x, y, this.glowRadius, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Draw particle
+            ctx.beginPath();
+            ctx.arc(x, y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+
+            // Draw line to battle node if targeted
+            if (this.targetBattleNode) {
+                ctx.beginPath();
+                ctx.moveTo(this.currentNode.x, this.currentNode.y);
+                ctx.lineTo(this.targetBattleNode.x, this.targetBattleNode.y);
+                ctx.strokeStyle = this.getRgbaColor(this.color, 0.3);
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+            getRgbaColor(color, alpha) {
+                if (typeof color === 'string') {
+                    if (color.startsWith('#')) {
+                        return this.hexToRgba(color, alpha);
+                    } else if (color.startsWith('rgb')) {
+                        return this.rgbToRgba(color, alpha);
+                    }
+                }
+                // Default to a visible color if the format is unknown
+                return `rgba(255, 0, 0, ${alpha})`;
+            }
+
+            hexToRgba(hex, alpha) {
+                let r = 0, g = 0, b = 0;
+                if (hex.length === 4) {
+                    r = parseInt(hex[1] + hex[1], 16);
+                    g = parseInt(hex[2] + hex[2], 16);
+                    b = parseInt(hex[3] + hex[3], 16);
+                } else if (hex.length === 7) {
+                    r = parseInt(hex.slice(1, 3), 16);
+                    g = parseInt(hex.slice(3, 5), 16);
+                    b = parseInt(hex.slice(5, 7), 16);
+                }
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+
+            rgbToRgba(rgb, alpha) {
+                const parts = rgb.match(/\d+/g);
+                if (parts && parts.length >= 3) {
+                    return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+                }
+                return `rgba(255, 0, 0, ${alpha})`;  // Default to red if parsing fails
+            }
+        }
+
+                
+
+        function initSimulation() {
+            width = canvas.width;
+            height = canvas.height;
+            rootNodes = [];
+            particles = [];
+            battleNodes = [];
+            additionalNodesCount = 0;
+
+            const cornerPositions = [
+                { x: 0, y: 0, angle: Math.PI / 4 },
+                { x: width, y: 0, angle: 3 * Math.PI / 4 },
+                { x: 0, y: height, angle: -Math.PI / 4 },
+                { x: width, y: height, angle: -3 * Math.PI / 4 },
+            ];
+
+            cornerPositions.forEach((pos, index) => {
+                const color = currentTheme[Object.keys(currentTheme)[index + 1]];
+                rootNodes.push(new Node(pos.x, pos.y, pos.angle, 100, 0, color, index));
+            });
+
+            updateAddNodeButtonState();
+        }
+
+        function addNewNode() {
+            if (additionalNodesCount >= 4) return;
+
+            const edgePositions = [
+                { x: width / 2, y: 0, angle: Math.PI / 2 },
+                { x: width, y: height / 2, angle: Math.PI },
+                { x: width / 2, y: height, angle: -Math.PI / 2 },
+                { x: 0, y: height / 2, angle: 0 },
+            ];
+
+            const pos = edgePositions[additionalNodesCount];
+            const colorIndex = (4 + additionalNodesCount) % 4 + 1;
+            let color = currentTheme[Object.keys(currentTheme)[colorIndex]];
+
+            // Avoid yellow except for the green theme
+            if (color === '#FFFF00' && currentTheme.name !== 'Emerald Enigma') {
+                color = '#FF00FF'; // Use magenta instead
+            }
+
+            rootNodes.push(new Node(pos.x, pos.y, pos.angle, 100, 0, color, rootNodes.length));
+            additionalNodesCount++;
+
+            updateAddNodeButtonState();
+        }
+
+        function updateAddNodeButtonState() {
+            addNodeBtn.disabled = additionalNodesCount >= 4;
+        }
+        function updateSimulation() {
+    rootNodes.forEach(node => node.update());
+    findIntersections();
+    battleNodes = battleNodes.filter(node => node.update());
+    updateParticles();
+    spawnParticles();
+}
+    
+        function updateParticles() {
+    particles = particles.filter(particle => particle.update());
+
+    function spawnParticlesForNode(node) {
+        if (node.battling) {
+            node.battlingNodes.forEach(battleNode => {
+                if (Math.random() < 0.1 * simulationSpeed) {
+                    particles.push(new Particle(node, node.color));
+                }
+            });
+        }
+        node.children.forEach(spawnParticlesForNode);
+    }
+
+    rootNodes.forEach(spawnParticlesForNode);
+}
+
+        function spawnParticles() {
+            rootNodes.forEach((root) => {
+                if (Math.random() < 0.3 * simulationSpeed) {
+                    particles.push(new Particle(root, root.color));
+                }
+            });
+        }
+            
+        function drawSimulation() {
+            ctx.fillStyle = currentTheme.background;
+            ctx.fillRect(0, 0, width, height);
+
+            rootNodes.forEach(node => node.draw());
+            battleNodes.forEach(node => node.draw());
+            particles.forEach(particle => particle.draw());
+        }
+                
+
+        function gameLoop(timestamp) {
+                    if (isRunning) {
+                        updateSimulation();
+                        drawSimulation();
+                        updateStats();
+                        requestAnimationFrame(gameLoop);
+                    }
+                }
+            
+        function resizeCanvas() {
+        const newWidth = window.innerWidth;
+        const newHeight = window.innerHeight;
+        
+        if (width !== newWidth || height !== newHeight) {
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            width = newWidth;
+            height = newHeight;
+            
+            // Only reinitialize if the size has actually changed
+            initSimulation();
+        }
+        
+        drawSimulation();
+    }
+    
+    function updateStats() {
+        if (statsOverlay) {
+            const nodeCounts = rootNodes.map(root => countNodes(root));
+            const totalNodes = nodeCounts.reduce((a, b) => a + b, 0);
+            
+            let statsHTML = `Total Nodes: ${totalNodes}<br>`;
+            statsHTML += '<div style="display: flex; flex-wrap: wrap; align-items: center; margin-top: 5px;">';
+            
+            rootNodes.forEach((root, index) => {
+                const count = nodeCounts[index];
+                statsHTML += `
+                    <div style="display: flex; align-items: center; margin-right: 10px; margin-bottom: 5px;">
+                        <svg width="12" height="12" style="margin-right: 5px;">
+                            <circle cx="6" cy="6" r="6" fill="${root.color}" />
+                        </svg>
+                        <span>${count}</span>
+                    </div>
+                `;
+            });
+            
+            statsHTML += '</div>';
+            statsOverlay.innerHTML = statsHTML;
+        }
+    }
+        function countNodes(node) {
+            let count = 1;
+            for (let child of node.children) {
+                count += countNodes(child);
+            }
+            return count;
+        }
+    
+        function initThemeSelector() {
+            themeSelector.innerHTML = '';
+            colorThemes.forEach((theme, index) => {
+                const themeOption = document.createElement('div');
+                themeOption.className = 'theme-option';
+                themeOption.style.backgroundColor = theme.background;
+                themeOption.innerHTML = `
+                    <div class="color-preview" style="background-color: ${theme.primary}"></div>
+                    <div class="color-preview" style="background-color: ${theme.secondary}"></div>
+                    <div class="color-preview" style="background-color: ${theme.tertiary}"></div>
+                    <div class="color-preview" style="background-color: ${theme.quaternary}"></div>
+                `;
+                themeOption.addEventListener('click', () => selectTheme(index));
+                themeSelector.appendChild(themeOption);
+            });
+            updateSelectedTheme();
+        }
+    
+        function selectTheme(index) {
+            currentTheme = colorThemes[index];
+            updateSelectedTheme();
+            initSimulation();
+            drawSimulation();
+        }
+    
+        function updateSelectedTheme() {
+            const themeOptions = document.querySelectorAll('.theme-option');
+            themeOptions.forEach((option, index) => {
+                option.classList.toggle('selected', colorThemes[index] === currentTheme);
+            });
+        }
+    
+        // Event Listeners
+        window.addEventListener('resize', resizeCanvas);
+    
+        startStopBtn.addEventListener('click', () => {
+            isRunning = !isRunning;
+            startStopBtn.textContent = isRunning ? 'Stop' : 'Start';
+            if (isRunning) {
+                requestAnimationFrame(gameLoop);
+            }
+        });
+    
+        resetBtn.addEventListener('click', () => {
+            initSimulation();
+            drawSimulation();
+            updateStats();
+        });
+    
+        togglePanel.addEventListener('click', () => {
+        sidePanel.classList.toggle('collapsed');
+        togglePanel.classList.toggle('collapsed');
+        
+        // Wait for the toggle animation to complete before resizing
+        setTimeout(() => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+            
+            if (width !== newWidth || height !== newHeight) {
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                width = newWidth;
+                height = newHeight;
+                
+                // Adjust existing nodes to fit new canvas size
+                adjustNodesForNewSize(newWidth / width, newHeight / height);
+            }
+            
+            drawSimulation();
+        }, 300); // Adjust this delay to match your toggle animation duration
+    });
+
+    addNodeBtn.addEventListener('click', () => {
+        addNewNode();
+        drawSimulation();
+        updateStats();
+    });
+
+    function adjustNodesForNewSize(scaleX, scaleY) {
+        function adjustNode(node) {
+            node.x *= scaleX;
+            node.y *= scaleY;
+            node.targetX *= scaleX;
+            node.targetY *= scaleY;
+            node.currentLength *= ((scaleX + scaleY) / 2); // Average scale for length
+            node.targetLength *= ((scaleX + scaleY) / 2);
+            node.children.forEach(adjustNode);
+        }
+        
+        rootNodes.forEach(adjustNode);
+    }
+    
+        speedControl.addEventListener('input', () => {
+            simulationSpeed = speedControl.value / 50; // Normalize to 0-2 range
+            speedValue.textContent = `${speedControl.value}`;
+        });
+    
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            initThemeSelector();
+            resizeCanvas();
+            updateStats();
+        });
+    </script>
+</body>
+</html>
