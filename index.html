@@ -238,8 +238,8 @@ class Node {
         this.depth = depth;
         this.children = [];
         this.growthSpeed = 1 * simulationSpeed;
-        this.branchProbability = 0.01 * simulationSpeed * (1 - this.depth / this.maxDepth);
-        this.maxChildren = 8;
+        this.branchProbability = 0.02 * simulationSpeed * (1 - this.depth / this.maxDepth);
+        this.maxChildren = 12;
         this.maxDepth = Math.floor(15 + Math.sqrt(width * height) / 100);
         this.color = color;
         this.rootIndex = rootIndex;
