@@ -268,7 +268,9 @@
             const branchAngle = this.angle + (Math.random() - 0.5) * Math.PI / 3;
             const lengthFactor = Math.random() < 0.2 ? 1.2 : 0.8;
             const branchLength = this.targetLength * lengthFactor;
-            this.children.push(new Node(this.targetX, this.targetY, branchAngle, branchLength, this.depth + 1, this.color, this.rootIndex));
+            const newNode = new Node(this.targetX, this.targetY, branchAngle, branchLength, this.depth + 1, this.color, this.rootIndex);
+            newNode.parent = this;  // Set the parent reference
+            this.children.push(newNode);
         }
 
         draw() {
@@ -318,69 +320,80 @@
         }
     }
 
-        class BattleNode {
-            constructor(x, y, node1, node2) {
-                this.x = x;
-                this.y = y;
-                this.node1 = node1;
-                this.node2 = node2;
-                this.energy1 = 50;
-                this.energy2 = 50;
-                node1.blocked = true;
-                node2.blocked = true;
-                node1.blockingBattleNode = this;
-                node2.blockingBattleNode = this;
+    class BattleNode {
+        constructor(x, y, node1, node2) {
+            this.x = x;
+            this.y = y;
+            this.node1 = node1;
+            this.node2 = node2;
+            this.energy1 = 50;
+            this.energy2 = 50;
+            this.maxEnergy = 100;
+            this.energyDecayRate = 0.075; // Energy decay per update
+           
+            node1.blocked = true;
+            node2.blocked = true;
+            node1.blockingBattleNode = this;
+            node2.blockingBattleNode = this;
+        }
+  
+    
+        update() {
+            // Decrease energy over time
+            this.energy1 = Math.max(0, this.energy1 - this.energyDecayRate * simulationSpeed);
+            this.energy2 = Math.max(0, this.energy2 - this.energyDecayRate * simulationSpeed);
+    
+            if (this.energy1 <= 0 || this.energy2 <= 0) {
+                this.resolveConflict();
+                return false;
             }
-
-            update() {
-                if (this.energy1 <= 0 || this.energy2 <= 0) {
-                    this.resolveConflict();
-                    return false;
-                }
-                return true;
-            }
-
-            receiveParticle(fromNode) {
-                if (fromNode === this.node1) {
-                    this.energy1 += 10;
-                    this.energy2 -= 5;
-                } else if (fromNode === this.node2) {
-                    this.energy2 += 10;
-                    this.energy1 -= 5;
-                }
-                this.energy1 = Math.max(0, Math.min(this.energy1, 100));
-                this.energy2 = Math.max(0, Math.min(this.energy2, 100));
-            }
-
-            
-            resolveConflict() {
-                const winner = this.energy1 > this.energy2 ? this.node1 : this.node2;
-                const loser = winner === this.node1 ? this.node2 : this.node1;
-                
-                winner.blocked = false;
-                winner.blockingBattleNode = null;
-                loser.die();
-
-                // Remove this battle node
-                const index = battleNodes.indexOf(this);
-                if (index > -1) {
-                    battleNodes.splice(index, 1);
-                }
-            }
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
-                ctx.fillStyle = 'red';
-                ctx.fill();
-
-                // Draw energy bars
-                ctx.fillStyle = this.node1.color;
-                ctx.fillRect(this.x - 10, this.y - 15, 20 * (this.energy1 / 100), 3);
-                ctx.fillStyle = this.node2.color;
-                ctx.fillRect(this.x - 10, this.y - 10, 20 * (this.energy2 / 100), 3);
+            return true;
+        }
+    
+        receiveParticle(fromNode) {
+            const baseEnergyBoost = 5;
+            if (fromNode === this.node1) {
+                const boost = baseEnergyBoost * this.distanceBoostFactor1;
+                this.energy1 = Math.min(this.maxEnergy, this.energy1 + boost);
+            } else if (fromNode === this.node2) {
+                const boost = baseEnergyBoost * this.distanceBoostFactor2;
+                this.energy2 = Math.min(this.maxEnergy, this.energy2 + boost);
             }
         }
-        let battleNodes = [];
+    
+        resolveConflict() {
+            const winner = this.energy1 > this.energy2 ? this.node1 : this.node2;
+            const loser = winner === this.node1 ? this.node2 : this.node1;
+            
+            winner.blocked = false;
+            winner.blockingBattleNode = null;
+            loser.die();
+    
+            // Remove this battle node
+            const index = battleNodes.indexOf(this);
+            if (index > -1) {
+                battleNodes.splice(index, 1);
+            }
+        }
+    
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = 'red';
+            ctx.fill();
+    
+            // Draw energy bars
+            const barWidth = 30;
+            const barHeight = 3;
+            ctx.fillStyle = this.node1.color;
+            ctx.fillRect(this.x - barWidth / 2, this.y - 15, barWidth * (this.energy1 / this.maxEnergy), barHeight);
+            ctx.fillStyle = this.node2.color;
+            ctx.fillRect(this.x - barWidth / 2, this.y - 10, barWidth * (this.energy2 / this.maxEnergy), barHeight);
+        }
+    }
+        
+    
+    let battleNodes = [];
 
         function findIntersections() {
             const allSegments = rootNodes.flatMap(node => node.getSegments());
